@@ -1,23 +1,25 @@
 // File: /pages/api/trains.js
-import axios from 'axios';
+const axios = require('axios');
 
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   try {
     const { name_origin, name_destination } = req.query;
 
+    // Check API key
     if (!process.env.API_KEY) {
       return res.status(500).json({
         error: "API_KEY not set in environment variables",
       });
     }
 
-
+    // Validate query parameters
     if (!name_origin || !name_destination) {
       return res.status(400).json({
         error: 'Missing required query parameters: name_origin and name_destination',
       });
     }
 
+    // Current date and time for Transport API
     const now = new Date();
     const itdDate = now.toISOString().split('T')[0].replace(/-/g, ''); // YYYYMMDD
     const itdTime = now.toTimeString().split(' ')[0].replace(/:/g, '').slice(0, 4); // HHMM
@@ -62,6 +64,7 @@ export default async function handler(req, res) {
       });
     }
 
+    // Check response validity
     if (!response.data || !Array.isArray(response.data.journeys)) {
       console.error('Invalid API response:', response.data);
       return res.status(500).json({
@@ -70,9 +73,11 @@ export default async function handler(req, res) {
       });
     }
 
+    // Return first 5 journeys
     res.status(200).json(response.data.journeys.slice(0, 5));
+
   } catch (error) {
     console.error('Server error:', error.message);
     res.status(500).json({ error: 'Failed to fetch train data', details: error.message });
   }
-}
+};
