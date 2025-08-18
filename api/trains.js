@@ -22,8 +22,14 @@ module.exports = async function handler(req, res) {
     // Current date and time for Transport API
     const now = new Date();
     now.setHours(now.getHours() + 10);
-    const itdDate = now.toISOString().split('T')[0].replace(/-/g, ''); // YYYYMMDD
-    const itdTime = now.toTimeString().split(' ')[0].replace(/:/g, '').slice(0, 4); // HHMM
+    // Format YYYYMMDD in local time
+    const itdDate = now.getFullYear().toString() +
+                    String(now.getMonth() + 1).padStart(2, '0') +
+                    String(now.getDate()).padStart(2, '0');
+
+    // Format HHMM in local time
+    const itdTime = String(now.getHours()).padStart(2, '0') +
+                    String(now.getMinutes()).padStart(2, '0');
 
     const requestConfig = {
       headers: { 'Authorization': `apikey ${process.env.API_KEY}` },
