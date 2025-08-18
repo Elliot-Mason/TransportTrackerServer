@@ -20,9 +20,17 @@ module.exports = async function handler(req, res) {
     }
 
     // Current date and time for Transport API
+    // Get current time in Sydney
     const now = new Date();
-    const itdDate = now.toISOString().split('T')[0].replace(/-/g, ''); // YYYYMMDD
-    const itdTime = now.toTimeString().split(' ')[0].replace(/:/g, '').slice(0, 4); // HHMM
+
+    // Sydney is UTC+10 (or UTC+11 in daylight saving). TfNSW handles daylight saving automatically if you send local time.
+    // Create date string YYYYMMDD and time HHMM in local time
+    const itdDate = now.getFullYear().toString() +
+                    String(now.getMonth() + 1).padStart(2, '0') +
+                    String(now.getDate()).padStart(2, '0');
+
+    const itdTime = String(now.getHours()).padStart(2, '0') +
+                    String(now.getMinutes()).padStart(2, '0');
 
     const requestConfig = {
       headers: { 'Authorization': `apikey ${process.env.API_KEY}` },
