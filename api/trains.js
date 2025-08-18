@@ -1,5 +1,5 @@
 // File: /pages/api/trains.js
-import axios from 'axios/dist/axios.min.js';
+import axios from 'axios';
 
 export default async function handler(req, res) {
   try {
