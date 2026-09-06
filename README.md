@@ -1,7 +1,7 @@
 # NSW Transport API Proxy Server
 
-This is an **Express.js** server that provides proxy API endpoints for fetching **real-time transport data** (trains, ferries, light rail, and metro) from the **Transport for NSW (TfNSW) API**.  
-It is designed to make frontend integration easier by avoiding CORS issues and hiding the API key.
+This is a **Vercel Serverless** proxy service for fetching **real-time transport data** (trains, ferries, light rail, and metro) from the **Transport for NSW (TfNSW) Trip Planner API**.  
+It simplifies frontend integration by securely managing the TfNSW API key and enabling CORS for cross-origin client apps.
 
 ---
 
@@ -11,58 +11,49 @@ It is designed to make frontend integration easier by avoiding CORS issues and h
 - Fetch upcoming **ferry departures** between two stops.
 - Fetch upcoming **light rail departures** between two stops.
 - Fetch upcoming **metro departures** between two stops.
-- Automatically uses the **current date and time** when making requests.
-- Supports **CORS** for cross-origin frontend access.
-- Handles **error responses** gracefully.
+- Automatically calculates the **current date and time in Sydney timezone** (`Australia/Sydney`), handling AEST and AEDT (Daylight Saving Time).
+- Built-in **CORS** headers and `OPTIONS` preflight support.
+- Standardized error handling and request timeouts (10s).
 
 ---
 
-## ⚙️ Installation
+## ⚙️ Setup & Deployment
 
-1. Clone the repository:
-   ```bash
-   git clone <your-repo-url>
-   cd <your-repo-folder>
-   ```
+### 1. Environment Variable
 
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
+You need an API key from the [Transport for NSW Open Data Hub](https://opendata.transport.nsw.gov.au/).
 
-3. Create a `.env` file in the project root:
-   ```env
-   API_KEY=your_tfnsw_api_key_here
-   PORT=5000
-   ```
+Configure the following environment variable in your Vercel Project Settings (or in a local `.env` file):
 
-   - **API_KEY**: Your Transport for NSW API key ([apply here](https://opendata.transport.nsw.gov.au/)).
-   - **PORT**: Optional. Defaults to `5000`.
+```env
+API_KEY=your_tfnsw_api_key_here
+```
 
----
+### 2. Local Testing
 
-## 🚀 Usage
-
-Start the server:
-
+Run locally using Node.js:
 ```bash
-node server.js
-```
+# With Node 20.6+ native env file loading
+node --env-file=.env test.js
 
-The server will be running at (unless hosted elsewhere):
-
-```
-http://localhost:5000
+# Or using Vercel CLI
+vercel dev
 ```
 
 ---
 
 ## 📡 API Endpoints
 
-Each endpoint requires two query parameters:
+All endpoints support `GET` and `OPTIONS` (preflight).
 
-- `name_origin`: The name or stop ID of the departure location.
-- `name_destination`: The name or stop ID of the arrival location.
+### Query Parameters
+
+| Parameter | Required | Description |
+| :--- | :--- | :--- |
+| `name_origin` | **Yes** | Stop ID or station name of the departure location (e.g., `10101100` for Central Station). |
+| `name_destination` | **Yes** | Stop ID or station name of the arrival location (e.g., `10101103` for Town Hall). |
+| `count` | No | Number of trips to return (default: `5`, max: `10`). |
+| `allow_buses` | No | Set to `true` to include replacement bus services during trackwork / disruptions (default: `false`). |
 
 ---
 
@@ -71,10 +62,10 @@ Each endpoint requires two query parameters:
 
 Example:
 ```
-/api/trains?name_origin=Central&name_destination=Parramatta
+/api/trains?name_origin=10101100&name_destination=10101115
 ```
 
-Returns the **next train trip** between the two locations.
+Returns up to 5 upcoming train journeys.
 
 ---
 
@@ -83,10 +74,10 @@ Returns the **next train trip** between the two locations.
 
 Example:
 ```
-/api/ferries?name_origin=Circular Quay Wharf 5&name_destination=Manly Wharf
+/api/ferries?name_origin=10101100&name_destination=10102027
 ```
 
-Returns the **next 5 ferry trips**.
+Returns up to 5 upcoming ferry journeys.
 
 ---
 
@@ -95,10 +86,10 @@ Returns the **next 5 ferry trips**.
 
 Example:
 ```
-/api/lightrail?name_origin=Central&name_destination=Dulwich Hill
+/api/lightrail?name_origin=10101100&name_destination=10101234
 ```
 
-Returns the **next 5 light rail trips**.
+Returns up to 5 upcoming light rail journeys.
 
 ---
 
@@ -107,49 +98,24 @@ Returns the **next 5 light rail trips**.
 
 Example:
 ```
-/api/metro?name_origin=Tallawong&name_destination=Chatswood
+/api/metro?name_origin=10101100&name_destination=10101345
 ```
 
-Returns the **next 5 metro trips**.
+Returns up to 5 upcoming metro journeys.
 
 ---
 
 ## 📂 Response Format
 
-Each endpoint returns an array of up to **5 journey objects** from the TfNSW API, in JSON format.
->This can be modified by changing the parameter 'calcNumberOfTrips' in each request.
+Each endpoint returns an array of journey objects from the TfNSW `rapidJSON` API.
 
-Example (truncated):
-```json
-[
-  {
-    "legs": [
-      {
-        "transportation": {
-          "product": { "name": "Train" }
-        },
-        "origin": { "name": "Central Station" },
-        "destination": { "name": "Parramatta Station" },
-        "departure": "2025-08-15T14:35:00Z"
-      }
-    ]
-  }
-]
-```
+> **Note on Departure Times:** Departure and arrival timestamps in TfNSW `rapidJSON` format are located within `journey.legs`:
+> - `leg.origin.departureTimeEstimated`: Real-time predicted departure (ISO 8601 UTC).
+> - `leg.origin.departureTimePlanned`: Scheduled timetable departure (ISO 8601 UTC). Fallback if estimated time is unavailable.
 
 ---
 
-## 🛠 Dependencies
+## 🛠 Tech Stack
 
-- [Express](https://expressjs.com/) – Web framework for Node.js.
-- [Axios](https://axios-http.com/) – HTTP client for API calls.
-- [dotenv](https://github.com/motdotla/dotenv) – Environment variable management.
-- [cors](https://github.com/expressjs/cors) – Cross-origin resource sharing.
-
----
-
-## ⚠️ Notes
-
-- This server **does not cache results** — each request queries TfNSW directly.
-- The `calcNumberOfTrips` parameter can be adjusted in the code to return more or fewer trips.
-- The server hides your API key from frontend clients, but requests still count toward your TfNSW API usage limits.
+- **Runtime:** Node.js (Vercel Serverless Functions)
+- **HTTP Client:** [Axios](https://axios-http.com/)

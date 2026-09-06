@@ -1,90 +1,14 @@
-// File: /pages/api/trains.js
-const axios = require('axios');
+const { handleTransportRequest } = require('../lib/transport');
+
+const EXCLUDED_MOT = {
+  exclMOT_2: 1, // Exclude Metro
+  exclMOT_4: 1, // Exclude Light Rail
+  exclMOT_5: 1, // Exclude Bus
+  exclMOT_7: 1, // Exclude Coach
+  exclMOT_9: 1, // Exclude Ferry
+  exclMOT_11: 1, // Exclude School Bus
+};
 
 module.exports = async function handler(req, res) {
-  try {
-    const { name_origin, name_destination } = req.query;
-
-    // Check API key
-    if (!process.env.API_KEY) {
-      return res.status(500).json({
-        error: "API_KEY not set in environment variables",
-      });
-    }
-
-    // Validate query parameters
-    if (!name_origin || !name_destination) {
-      return res.status(400).json({
-        error: 'Missing required query parameters: name_origin and name_destination',
-      });
-    }
-
-    // Current date and time for Transport API
-    const now = new Date();
-    now.setHours(now.getHours() + 10);
-    // Format YYYYMMDD in local time
-    const itdDate = now.getFullYear().toString() +
-                    String(now.getMonth() + 1).padStart(2, '0') +
-                    String(now.getDate()).padStart(2, '0');
-
-    // Format HHMM in local time
-    const itdTime = String(now.getHours()).padStart(2, '0') +
-                    String(now.getMinutes()).padStart(2, '0');
-
-    const requestConfig = {
-      headers: { 'Authorization': `apikey ${process.env.API_KEY}` },
-      params: {
-        outputFormat: 'rapidJSON',
-        coordOutputFormat: 'EPSG:4326',
-        depArrMacro: 'dep',
-        itdDate,
-        itdTime,
-        type_origin: 'any',
-        name_origin,
-        type_destination: 'any',
-        name_destination,
-        calcNumberOfTrips: 1,
-        TfNSWTR: true,
-        version: '10.2.1.42',
-        itOptionsActive: 1,
-        cycleSpeed: 16,
-        excludedMeans: 'checkbox',
-        exclMOT_2: 1,
-        exclMOT_4: 1,
-        exclMOT_5: 1,
-        exclMOT_7: 1,
-        exclMOT_9: 1,
-        exclMOT_11: 1,
-      },
-      timeout: 10000, // 10s timeout
-    };
-
-    let response;
-    try {
-      response = await axios.get('https://api.transport.nsw.gov.au/v1/tp/trip', requestConfig);
-    } catch (axiosError) {
-      console.error('Transport API request failed:', axiosError.response?.data || axiosError.message);
-      const status = axiosError.response?.status || 500;
-      return res.status(status).json({
-        error: 'Transport API request failed',
-        details: axiosError.response?.data || axiosError.message,
-      });
-    }
-
-    // Check response validity
-    if (!response.data || !Array.isArray(response.data.journeys)) {
-      console.error('Invalid API response:', response.data);
-      return res.status(500).json({
-        error: 'Transport API returned invalid data',
-        details: response.data || null,
-      });
-    }
-
-    // Return first 5 journeys
-    res.status(200).json(response.data.journeys.slice(0, 5));
-
-  } catch (error) {
-    console.error('Server error:', error.message);
-    res.status(500).json({ error: 'Failed to fetch train data', details: error.message });
-  }
+  return handleTransportRequest(req, res, EXCLUDED_MOT, 'trains');
 };
