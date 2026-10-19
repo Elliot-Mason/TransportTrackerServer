@@ -54,6 +54,8 @@ All endpoints support `GET` and `OPTIONS` (preflight).
 | `name_destination` | **Yes** | Stop ID or station name of the arrival location (e.g., `10101103` for Town Hall). |
 | `count` | No | Number of trips to return (default: `5`, max: `10`). |
 | `allow_buses` | No | Set to `true` to include replacement bus services during trackwork / disruptions (default: `false`). |
+| `itdDate` | No | Custom date in `YYYYMMDD` format (e.g., `20261019`). Defaults to the current date in Sydney timezone. |
+| `itdTime` | No | Custom time in 24-hour `HHMM` format (e.g., `1430`). Defaults to the current time in Sydney timezone. |
 
 ---
 
